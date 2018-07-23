@@ -1,0 +1,108 @@
+package wdcyz;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.SortedMap;
+import java.util.regex.Pattern;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import me.chanjar.weixin.common.bean.WxJsapiPrepayOrder;
+import me.chanjar.weixin.common.bean.WxJsapiUnifiedOrder;
+import me.chanjar.weixin.common.exception.WxErrorException;
+import me.chanjar.weixin.common.util.json.WxGsonBuilder;
+import me.chanjar.weixin.mp.bean.result.WxMpOAuth2AccessToken;
+import me.chanjar.weixin.mp.util.crypto.WxMpCryptUtil;
+
+import com.alibaba.fastjson.JSONObject;
+import com.justep.baas.action.ActionContext;
+
+/**
+ * 
+ * @author jack
+ * @email xiaoshiping@163.com
+ *
+ */
+public class OrderPay{
+	
+	static WxMpServiceInstance instance = WxMpServiceInstance.getInstance();
+	
+	  public JSONObject unifiedorder(JSONObject params, ActionContext context) throws WxErrorException {
+		  String openId = "";
+		  String nonceStr = getRandomStringByLength(20);
+		  String url = "https://api.mch.weixin.qq.com/pay/unifiedorder";
+		  String tradeNo = getRandomStringByLength(20);
+		  
+		  SortedMap<Object,Object> parameters = new TreeMap<Object,Object>();  
+	      parameters.put("appid", params.getString("appId"));  
+	      parameters.put("mch_id", params.getString("mchId"));  
+	      parameters.put("device_info", "WEB");  
+	      parameters.put("body", params.getString("body"));  
+	      parameters.put("nonce_str", nonceStr);
+	      parameters.put("notify_url", params.getString("notifyUrl"));
+	      parameters.put("out_trade_no", tradeNo);
+	      parameters.put("spbill_create_ip", "127.0.0.1");
+	      parameters.put("total_fee", "1");
+	      parameters.put("timeStamp", ""+(System.currentTimeMillis() / 1000));
+	      parameters.put("trade_type", "JSAPI");
+	      parameters.put("attach", "weixin pay test");
+	      parameters.put("openid", params.getString("openId"));
+	      String mySign = createSign("UTF-8", parameters); 
+	      logger.info("WeixinService Sign = " + mySign);
+	      String postData = "<xml>"
+	  	  		+ "<appid>" + this.getWxMpConfigStorage().getAppId() + "</appid>"
+	  	  		+ "<device_info>WEB</device_info>"
+	  	  		+ "<attach>weixin pay test</attach>"
+	  	  		+ "<body>JSAPI_Test</body>"
+	  	  		+ "<mch_id>1482944172</mch_id>"
+	  	  		+ "<nonce_str>" + nonceStr + "</nonce_str>"
+	  	  		+ "<notify_url>https://dop.zxuat.com</notify_url>"
+	  	  		+ "<openid>"+openId+"</openid>"
+	  	  		+ "<out_trade_no>"+tradeNo+"</out_trade_no>"
+	  	  		+ "<spbill_create_ip>127.0.0.1</spbill_create_ip>"
+	  	  		+ "<total_fee>1</total_fee>"
+	  	  		+ "<trade_type>JSAPI</trade_type>"
+	  	  		+ "<sign>" + mySign + "</sign>"
+	  	  		+ "</xml>";
+	      logger.info("WeixinService post data = " + postData);
+		  return this.post(url, postData);
+	  }
+	  
+	  /** 
+	   * 微信支付签名算法sign 
+	   * @param characterEncoding 
+	   * @param parameters 
+	   * @return 
+	   */  
+	  @SuppressWarnings("unchecked")  
+	  public static String createSign(String characterEncoding,SortedMap<Object,Object> parameters){  
+	      StringBuffer sb = new StringBuffer();  
+	      Set es = parameters.entrySet();//所有参与传参的参数按照accsii排序（升序）  
+	      Iterator it = es.iterator();  
+	      while(it.hasNext()) {  
+	          Map.Entry entry = (Map.Entry)it.next();  
+	          String k = (String)entry.getKey();  
+	          Object v = entry.getValue();  
+	          if(null != v && !"".equals(v)   
+	                  && !"sign".equals(k) && !"key".equals(k)) {  
+	              sb.append(k + "=" + v + "&");  
+	          }  
+	      }  
+	      sb.append("key=" + ApiKey);  
+	      String sign = MD5Util.MD5Encode(sb.toString(), characterEncoding).toUpperCase();  
+	      return sign;  
+	  } 
+	  
+	  private static String getRandomStringByLength(int length) {  
+	      String base = "abcdefghijklmnopqrstuvwxyz0123456789";  
+	      Random random = new Random();  
+	      StringBuffer sb = new StringBuffer();  
+	      for (int i = 0; i < length; i++) {  
+	          int number = random.nextInt(base.length());  
+	          sb.append(base.charAt(number));  
+	      }  
+	      return sb.toString();  
+	  }  
+}

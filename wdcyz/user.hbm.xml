@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-mapping PUBLIC  
+        "-//Hibernate/Hibernate Mapping DTD 3.0//EN"  
+        "http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
+
+<hibernate-mapping>
+	<class entity-name="User" table="tf_f_user">
+		<id name="USER_ID" column="USER_ID" type="string">
+		</id>
+		<property name="USER_NAME" column="USER_NAME" type="string" />
+		<property name="USER_MOBILE" column="USER_MOBILE" type="string" />
+		<property name="USER_ADDR" column="USER_ADDR" type="string" />
+	</class>
+	<query name="queryUserByID">
+        <![CDATA[
+            from tf_f_user where USER_ID = :id
+        ]]>
+	</query>
+</hibernate-mapping>   

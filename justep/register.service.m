@@ -1,0 +1,1 @@
+<?xml version="1.0" encoding="UTF-8"?><model xmlns="http://www.justep.com/model"><action xmlns="http://www.w3.org/1999/xhtml" name="sendEmail" impl="Register.sendEmail"><public name="param" type="String"></public></action><action xmlns="http://www.w3.org/1999/xhtml" name="checkUsername" impl="Register.checkUsername"><public name="param" type="String"></public></action></model>

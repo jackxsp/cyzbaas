@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-mapping PUBLIC  
+        "-//Hibernate/Hibernate Mapping DTD 3.0//EN"  
+        "http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
+
+<hibernate-mapping>
+	<class entity-name="Order" table="takeout_order">
+		<id name="fID" column="fID" type="string">
+			<generator class="assigned" />
+		</id>
+		<property name="fCreateTime" column="fCreateTime" type="string" />
+		<property name="fContent" column="fContent" type="string" />
+		<property name="fUserID" column="fUserID" type="string" />
+		<property name="fUserName" column="fUserName" type="string" />
+		<property name="fPhoneNumber" column="fPhoneNumber" type="string" />
+		<property name="fAddress" column="fAddress" type="string" />
+		<property name="fSum" column="fSum" type="string" />
+	</class>
+	<query name="queryOrderByUserID">
+        <![CDATA[
+            from Order where fUserID = :userID
+        ]]>
+	</query>
+</hibernate-mapping>   
