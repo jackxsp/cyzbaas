@@ -152,7 +152,7 @@ public class WxPayNotify{
                             return_data.put("return_msg", "金额异常");  
                             return WXRequestUtil.GetMapToXML(return_data); 
                         }  
-                    	sql = "update tf_f_order set status = '2' where order_id = '" + out_trade_no + "'";
+                    	sql = "update tf_f_order set `status` = '2',pay_type='1' where order_id = '" + out_trade_no + "'";
                     	Wdcyz.modify(sql, conn);
                     }
                }catch(SQLException sqle){

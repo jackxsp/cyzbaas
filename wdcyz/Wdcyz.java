@@ -63,7 +63,7 @@ public class Wdcyz {
 		}
 	}
 
-	//在点菜统计功能中用于获取用户点了哪些菜,当次点菜汇总查询，用于打印配菜单。订单状态：0:初始订单,1:待支付,2:已支付,3:已取消,4:已配送
+	//在点菜统计功能中用于获取用户点了哪些菜,当次点菜汇总查询，用于打印配菜单。订单状态拆分为支付状态：0:初始订单,1:待支付,2:已支付,3:已取消，配送状态：0：未配送,1:已配送
 	public static JSONObject getUserSelectVege(JSONObject params, ActionContext context) throws SQLException, NamingException {
 		// 获取参数
 		Object columns = params.get("columns");
@@ -95,8 +95,8 @@ public class Wdcyz {
 			where a.user_id = c.user_id
 			group by a.send_date,a.user_id order by a.send_date,c.user_name) m left join
 			(select user_id,group_concat(concat(content,'(',statusname,')'),'') content from 
-			(select user_id,`status`,if(`status`='1','待支付',if(`status`='2','已支付','未知')) statusname,group_concat(content) as content from tf_f_order group by user_id ,`status`) a
-			where `status` in ('1','2') group by user_id) n on m.user_id = n.user_id 
+			(select user_id,`status`,if(`status`='1','待支付',if(`status`='2','已支付','未知')) statusname,send_status,group_concat(content) as content from tf_f_order group by user_id ,`status`) a
+			where `status` in ('1','2') and send_status='0' group by user_id) n on m.user_id = n.user_id 
 			left join tb_d_post_comp t on m.post_id = t.post_id order by m.create_date desc
 
 			*/
@@ -124,8 +124,8 @@ public class Wdcyz {
 			
 			sql = sql + ") m left join " 
 					+ " (select user_id,group_concat(concat(content,'(',statusname,')'),'') content from " 
-					+ " (select user_id,`status`,if(`status`='1','待支付',if(`status`='2','已支付','未知')) statusname,group_concat(content) as content from tf_f_order group by user_id ,`status`) a"
-					+ " where `status` in ('1','2') group by user_id) n on m.user_id = n.user_id "
+					+ " (select user_id,`status`,if(`status`='1','待支付',if(`status`='2','已支付','未知')) statusname,send_status,group_concat(content) as content from tf_f_order group by user_id ,`status`) a"
+					+ " where `status` in ('1','2') and send_status='0' group by user_id) n on m.user_id = n.user_id "
 					+ " left join tb_d_post_comp t on m.post_id = t.post_id order by m.create_date desc";
 			System.out.println("sql:" + sql);
 			JSONObject ret = new JSONObject();
@@ -692,9 +692,10 @@ public class Wdcyz {
 		Table table = null;
 		Connection conn = context.getConnection(DATASOURCE_WDCYZ);
 		try{
-			String sql = "select a.ID,a.user_id,a.add_fee_date,a.vip_type,a.start_date,a.end_date,a.left_cnt,a.`status`,a.note,b.vip_type_name,c.status_name from tf_member_add_fee a  "
+			String sql = "select a.ID,a.user_id,d.vip_card_no,a.add_fee_date,a.vip_type,a.start_date,a.end_date,a.left_cnt,a.`status`,a.note,b.vip_type_name,c.status_name from tf_member_add_fee a  "
 					+ " left join tb_d_vip_type b on a.vip_type = b.vip_type_id "
-					+ " left join tb_d_status c on a.`status` = c.status_id ";
+					+ " left join tb_d_status c on a.`status` = c.status_id "
+					+ " left join tf_f_user d on a.user_id = d.USER_ID";
 			String where = (filters != null && filters.size() > 0) ? " WHERE " + DataUtils.arrayJoin(filters.toArray(), "(%s)", " AND ") : "";
 			sql = sql + where + " order by a.start_date desc";
 			
@@ -708,6 +709,91 @@ public class Wdcyz {
 		}
 	}
 
+	//获取成员荤菜套餐信息
+	public static JSONObject getMemberAcct(JSONObject params, ActionContext context) throws SQLException, NamingException {
+		// 获取参数
+		Object columns = params.get("columns");
+		Integer limit = params.getInteger("limit");
+		Integer offset = params.getInteger("offset");
+		String userId = params.getString("user_id");
+		System.out.println("userId==="+userId);	
+		if(Utils.isEmptyString(params.getString("filter"))) params.put("filter", "1=1");
+		String filter =  params.getString("filter");
+		
+		//System.out.println("secFlag==="+secFlag);	
+		
+		List<Object> sqlParams = new ArrayList<Object>();
+		List<String> filters = new ArrayList<String>();
+		if (!Utils.isEmptyString(filter)) {
+			filters.add(filter);
+		}
+		if (!Utils.isEmptyString(userId)) {
+			filters.add(" a.user_id = '" + userId + "' ");
+		}		
+		
+		Table table = null;
+		Connection conn = context.getConnection(DATASOURCE_WDCYZ);
+		try{
+			String sql = "select a.id,a.acct_no,a.user_id,a.balance,date_format(a.create_time,'%Y-%m-%d') create_time,a.note,"
+					+ "b.VIP_NAME as vip_name,b.VIP_CARD_NO as vip_card_no,b.`STATUS` as `status`,"
+					+ "c.status_name "
+					+ "from tf_f_acct a left outer join tf_f_user b on a.user_id = b.USER_ID "
+					+ "left outer join tb_d_status c on b.`STATUS` = c.status_id";
+			String where = (filters != null && filters.size() > 0) ? " WHERE " + DataUtils.arrayJoin(filters.toArray(), "(%s)", " AND ") : "";
+			sql = sql + where ;
+			JSONObject ret = new JSONObject();
+			table = DataUtils.queryData(conn, sql, sqlParams, columns, offset, limit);
+			ret = Transform.tableToJson(table);
+			//System.out.println("jsonObj==="+ret);	
+			return ret;
+		} finally {
+			conn.close();
+		}
+	}
+
+	//获取成员荤菜套餐消费记录信息
+	public static JSONObject getAcctLog(JSONObject params, ActionContext context) throws SQLException, NamingException {
+		// 获取参数
+		Object columns = params.get("columns");
+		Integer limit = params.getInteger("limit");
+		Integer offset = params.getInteger("offset");
+		String acctId = params.getString("acct_id");
+		System.out.println("acctId==="+acctId);	
+		if(Utils.isEmptyString(params.getString("filter"))) params.put("filter", "1=1");
+		String filter =  params.getString("filter");
+		String orderBy =  params.getString("orderBy");
+		
+		//System.out.println("secFlag==="+secFlag);	
+		
+		List<Object> sqlParams = new ArrayList<Object>();
+		List<String> filters = new ArrayList<String>();
+		if (!Utils.isEmptyString(filter)) {
+			filters.add(filter);
+		}
+		if (!Utils.isEmptyString(acctId)) {
+			filters.add(" a.acct_id = '" + acctId + "' ");
+		}		
+		
+		Table table = null;
+		Connection conn = context.getConnection(DATASOURCE_WDCYZ);
+		try{
+			String sql = "select a.id,a.acct_id,a.oper_type,a.oper_cash,a.balance,a.oper_time,a.channel,a.order_id,"
+					+ "b.content,c.channel_name,d.type_name"
+					+ " from tf_f_acct_log a left outer join tf_f_order b on a.order_id=b.ORDER_ID "
+					+ " left outer join tb_d_channel c on a.channel = c.channel_id "
+					+ " left outer join tb_d_oper_type d on a.oper_type = d.type_id";
+			String where = (filters != null && filters.size() > 0) ? " WHERE " + DataUtils.arrayJoin(filters.toArray(), "(%s)", " AND ") : "";
+			orderBy = !Utils.isEmptyString(orderBy) ? " ORDER BY " + orderBy : "";
+			sql = sql + where + orderBy;
+			JSONObject ret = new JSONObject();
+			table = DataUtils.queryData(conn, sql, sqlParams, columns, offset, limit);
+			ret = Transform.tableToJson(table);
+			//System.out.println("jsonObj==="+ret);	
+			return ret;
+		} finally {
+			conn.close();
+		}
+	}
 	//保存订单信息
 	public static JSONObject saveOrderInfo(JSONObject params, ActionContext context) throws SQLException, NamingException ,ParseException{
 		// 获取参数
